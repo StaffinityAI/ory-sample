@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "ory-test"
+version = "0.1.0"
+description = ""
+authors = ["Jan Beelte <jan.beelte@mailbox.org>"]
+readme = "README.md"
+
+[tool.poetry.scripts]
+start = "ory_test.main:start"
+debug = "ory_test.main:start_debug"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["all"], version = "^0.112.0"}
+requests = "^2.32.3"
+pytest-xprocess = "^1.0.2"
+sqlalchemy = "^2.0.31"
+pytest = "^8.3.2"
+python-jose = "^3.3.0"
+authlib = "^1.3.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
