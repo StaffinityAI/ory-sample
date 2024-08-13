@@ -1,0 +1,97 @@
+services:
+  postgres-kratos:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: kratos_user
+      POSTGRES_PASSWORD: kratos_password
+      POSTGRES_DB: kratos_db
+    volumes:
+      - postgres-kratos-data:/var/lib/postgresql/data
+    networks:
+      - kratos-net
+    # needed only to debug the database connection
+    # ports:
+    #   - "5433:5432" 
+
+  kratos:
+    depends_on:
+      - postgres-kratos
+    image: oryd/kratos:v1.1.0
+    ports:
+      - '4433:4433' # public
+      - '4434:4434' # admin
+    restart: unless-stopped
+    environment:
+      - DSN=postgresql://kratos_user:kratos_password@postgres-kratos/kratos_db?sslmode=disable
+      - LOG_LEVEL=trace
+    command: serve -c /etc/kratos/kratos.yml --dev --watch-courier
+    #this should only be used for first time to migrate the database and set up the tables
+    # command: -c /etc/kratos/kratos.yml migrate sql -e --yes 
+    volumes:
+      - type: bind
+        source: ./kratos
+        target: /etc/kratos
+    networks:
+      - ory-main-net
+      - kratos-net
+
+  postgres-hydra:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hydra_user
+      POSTGRES_PASSWORD: hydra_password
+      POSTGRES_DB: hydra_db
+    volumes:
+      - postgres-hydra-data:/var/lib/postgresql/data
+    networks:
+      - hydra-net
+    # needed only to debug the database connection
+    # ports:
+    #   - "5432:5432" 
+
+  hydra:
+    image: oryd/hydra:v2.2.0
+    ports:
+      - "4444:4444" # Public port
+      - "4445:4445" # Admin port
+      - "5555:5555" # Port for hydra token user
+    command: serve -c /etc/hydra/hydra.yml all --dev
+    #this should only be used for first time to migrate the database and set up the tables
+    # command: migrate -c /etc/hydra/hydra.yml sql -e --yes
+    volumes:
+      - type: bind
+        source: ./hydra
+        target: /etc/hydra
+    environment:
+      - DSN=postgresql://hydra_user:hydra_password@postgres-hydra/hydra_db?sslmode=disable
+    restart: unless-stopped
+    depends_on:
+      - postgres-hydra
+    networks:
+      - ory-main-net
+      - hydra-net
+
+# Test endpoints to check all the hydra and kratos services are up and running
+  fastapi:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        - "IMAGE=python:3.12-alpine"
+    volumes:
+      - ./ory_test:/app/ory_test
+    ports:
+      - "8000:8000"
+    depends_on:
+      - hydra
+    command: [ "--reload" ]
+    networks:
+      - ory-main-net
+      
+networks:
+  ory-main-net:
+  hydra-net:
+  kratos-net:
+volumes:
+  postgres-hydra-data:
+  postgres-kratos-data:
